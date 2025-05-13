@@ -235,78 +235,71 @@ def train():
     logging.info('Done...\n')
 
 
-def test():
-    # for i in range(50):
-        args = parse_args()
-        path = r''  # 修改路径
-        test_loader = torch.utils.data.DataLoader(MyDataset(4096, path, train=False), batch_size=4,
-                                                  shuffle=True, drop_last=False)  # 4096 to 512
-        # Try to load models
-        model = PointNet2MSGSeg(12).cuda(args.gpu)  # 6 to 9
+def test(mode='merged'):
+    args = parse_args()
+    path = r''  # 设置数据路径
+    test_loader = torch.utils.data.DataLoader(MyDataset(4096, path, train=False), batch_size=1, shuffle=False)
 
-        model.load_state_dict(torch.load("weights_test/pycbam_550.pth"))  # 修改保存名称
-        model = model.eval()
-        test_true_cls = []
-        test_pred_cls = []
-        test_true_seg = []
-        test_pred_seg = []
-        points_list = []
-        pred_list = []
-        for data, label in test_loader:
-            data, label = data.cuda(args.gpu), label.cuda(args.gpu)
-            out, _ = model(data)
-            batch_size = data.size()[0]
-            preds = out.max(dim=1)[1]
-            label = label.cpu().numpy()
-            preds = preds.detach().cpu().numpy()
-            test_true_cls.append(label.reshape(-1))
-            test_pred_cls.append(preds.reshape(-1))
-            test_true_seg.append(label)
-            test_pred_seg.append(preds)
+    model = PointNet2MSGSeg(12).cuda(args.gpu)
+    model.load_state_dict(torch.load("weights_test/pycbam_550.pth"))
+    model = model.eval()
 
-            pred = F.log_softmax(out, dim=1).permute(0, 2, 1)
+    test_true_cls = []
+    test_pred_cls = []
+    test_true_seg = []
+    test_pred_seg = []
+    all_points = []
 
-            for j in range(pred.size(0)):
-                batch_pred = pred[j]
-                batch_target = label[j]
-                batch_choice = batch_pred.data.max(1)[1]
-                pred_list.append(batch_choice.unsqueeze(0).reshape(-1, 1))
-            a = torch.cat(pred_list, dim=0).squeeze(0).cpu().data.numpy()
-            points_list.append(data[:, :, 0:3].reshape(-1, 3))
+    # 使用 tqdm 包裹 test_loader，加进度条
+    for i, (data, label) in enumerate(tqdm(test_loader, desc="Testing scenes", ncols=80)):
+        data, label = data.cuda(args.gpu), label.cuda(args.gpu)
+        out, _ = model(data)
+        preds = out.argmax(dim=1).squeeze(0).cpu().numpy()
+        label_np = label.squeeze(0).cpu().numpy()
+        xyz = data.squeeze(0)[:, :3].cpu().numpy()
 
-        all_points = torch.cat(points_list, dim=0).cpu().data.numpy()
-        out = np.hstack((all_points, a))
+        out_np = np.hstack((xyz, preds.reshape(-1, 1)))
 
-        test_true_cls = np.concatenate(test_true_cls)
-        test_pred_cls = np.concatenate(test_pred_cls)
-        test_acc = metrics.accuracy_score(test_true_cls, test_pred_cls)
-        f1_score = metrics.f1_score(test_true_cls, test_pred_cls, average='micro')
-        kappa = metrics.cohen_kappa_score(test_true_cls, test_pred_cls)
-        avg_per_class_acc = metrics.balanced_accuracy_score(test_true_cls, test_pred_cls)
-        test_true_seg = np.concatenate(test_true_seg, axis=0)
-        test_pred_seg = np.concatenate(test_pred_seg, axis=0)
-        test_ious = calculate_sem_IoU(test_pred_seg, test_true_seg)
+        if mode == 'separate':
+            os.makedirs("results/area_separate", exist_ok=True)
+            np.savetxt(f"results/area_separate/scene_{i}.txt", out_np, fmt='%.6f', delimiter=' ')
+        else:
+            all_points.append(out_np)
 
-        # 在测试循环结束后，计算混淆矩阵和Kappa系数
-        y_true = test_true_cls
-        y_pred = test_pred_cls
-        confusion_mat = confusion_matrix(y_true, y_pred, labels=range(12))
+        test_true_cls.append(label_np.reshape(-1))
+        test_pred_cls.append(preds.reshape(-1))
+        test_true_seg.append(label_np)
+        test_pred_seg.append(preds)
 
-        precision_per_class, recall_per_class, IoU_per_class, mIoU = calculate_metrics_per_class(confusion_mat, y_true, y_pred)
-        # kappa = cohen_kappa_score(y_true, y_pred)
+    if mode == 'merged':
+        os.makedirs("results/area", exist_ok=True)
+        merged_out = np.vstack(all_points)
+        np.savetxt("results/area/area_cbam.txt", merged_out, fmt='%.6f', delimiter=' ')
 
-        for cls_index, iou in enumerate(IoU_per_class):
-            logging.info('Class {}: IoU: {:.4f}'.format(cls_index, iou))
-        np.savetxt("results/area/area_cbam.txt", out, fmt='%f', delimiter=' ')  # 修改保存名称
-        logging.info('Test acc:{:.4f} Test avg acc:{:.4f} Test mIOU:{:.4f} F1_score:{:.4f} Kappa:{:.4f}'
-                     .format(test_acc, avg_per_class_acc, np.mean(test_ious), f1_score, kappa))
+    test_true_cls = np.concatenate(test_true_cls)
+    test_pred_cls = np.concatenate(test_pred_cls)
+    test_acc = metrics.accuracy_score(test_true_cls, test_pred_cls)
+    f1_score = metrics.f1_score(test_true_cls, test_pred_cls, average='micro')
+    kappa = metrics.cohen_kappa_score(test_true_cls, test_pred_cls)
+    avg_per_class_acc = metrics.balanced_accuracy_score(test_true_cls, test_pred_cls)
+    test_true_seg = np.concatenate(test_true_seg, axis=0)
+    test_pred_seg = np.concatenate(test_pred_seg, axis=0)
+    test_ious = calculate_sem_IoU(test_pred_seg, test_true_seg)
 
-        for cls in range(12):
-            logging.info(
-                f"Class {cls}: Precision: {precision_per_class[cls]}, Recall: {recall_per_class[cls]}, IoU: {IoU_per_class[cls]}")
-        logging.info(f"Mean IoU: {mIoU}, Kappa: {kappa}")
+    confusion_mat = confusion_matrix(test_true_cls, test_pred_cls, labels=range(12))
+    precision_per_class, recall_per_class, IoU_per_class, mIoU = calculate_metrics_per_class(confusion_mat, test_true_cls, test_pred_cls)
+
+    for cls_index, iou in enumerate(IoU_per_class):
+        logging.info(f'Class {cls_index}: IoU: {iou:.4f}')
+    logging.info('Test acc:{:.4f} Test avg acc:{:.4f} Test mIOU:{:.4f} F1_score:{:.4f} Kappa:{:.4f}'.format(
+        test_acc, avg_per_class_acc, np.mean(test_ious), f1_score, kappa
+    ))
+    for cls in range(12):
+        logging.info(f"Class {cls}: Precision: {precision_per_class[cls]:.4f}, "
+                     f"Recall: {recall_per_class[cls]:.4f}, IoU: {IoU_per_class[cls]:.4f}")
+    logging.info(f"Mean IoU: {mIoU:.4f}, Kappa: {kappa:.4f}")
     
 
 if __name__ == '__main__':
     # train()
-    test()
+    test(mode="separate")

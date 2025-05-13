@@ -1,80 +1,55 @@
-#!/usr/bin/env python3
-# visualize_with_vtk.py
-
 import numpy as np
-import vtk
+import open3d as o3d
 import matplotlib.pyplot as plt
 
-def load_and_normalize(txt_path):
-    # 读取 x y z label
-    data = np.loadtxt(txt_path)
-    xyz   = data[:, :3]
+
+def visualize_point_cloud_txt(
+    file_path: str,
+    point_size: int = 15,
+    colormap: str = "tab20"
+):
+    """
+    使用 Open3D 可视化带标签的点云。
+
+    参数：
+        file_path (str): txt 文件路径，每行应为 'x y z label'；
+        point_size (int): 点的大小（渲染时使用），默认 5；
+        colormap (str): matplotlib 支持的 colormap 名称，用于标签上色，默认 'tab20'。
+
+    示例：
+        visualize_point_cloud_txt("area_scene_0.txt")
+        visualize_point_cloud_txt("area_scene_0.txt", point_size=10, colormap="rainbow")
+    """
+    # 1. 读取数据
+    data = np.loadtxt(file_path)  # shape = (N, ≥4)
+    points = data[:, :3]
     labels = data[:, 3].astype(int)
-    # 中心化
-    centroid = xyz.mean(axis=0)
-    xyz = xyz - centroid
-    # 缩放到单位球
-    scale = np.max(np.linalg.norm(xyz, axis=1))
-    xyz = xyz / scale
-    return xyz, labels
 
-def create_vtk_point_cloud(xyz, labels):
-    # 1. vtkPoints
-    points = vtk.vtkPoints()
-    for x, y, z in xyz:
-        points.InsertNextPoint(x, y, z)
+    # 2. 生成颜色：根据标签映射到一个离散 colormap
+    cmap = plt.get_cmap(colormap)
+    num_classes = labels.max() + 1
+    colors = cmap(labels / max(num_classes - 1, 1))[:, :3]  # 归一化到 [0,1]
 
-    # 2. 颜色数组（UnsignedChar 0–255）
-    colors = vtk.vtkUnsignedCharArray()
-    colors.SetNumberOfComponents(3)
-    colors.SetName("Colors")
-    # 用 matplotlib 的 tab20 生成调色板
-    cmap = plt.get_cmap("tab20")
-    for lbl in labels:
-        r, g, b, _ = cmap(lbl % 20)
-        colors.InsertNextTuple3(int(r*255), int(g*255), int(b*255))
+    # 3. 构造 Open3D 点云
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    pcd.colors = o3d.utility.Vector3dVector(colors)
 
-    # 3. 将点和颜色放入 PolyData
-    poly = vtk.vtkPolyData()
-    poly.SetPoints(points)
-    poly.GetPointData().SetScalars(colors)
+    # 4. 可视化
+    vis = o3d.visualization.Visualizer()
+    vis.create_window(window_name="PointCloud", width=800, height=600)
+    vis.add_geometry(pcd)
 
-    # 4. 顶点图元化（VertexGlyphFilter）
-    glyph = vtk.vtkVertexGlyphFilter()
-    glyph.SetInputData(poly)
-    glyph.Update()
+    # 设置渲染选项：点大小
+    render_opt = vis.get_render_option()
+    render_opt.point_size = point_size
+    render_opt.background_color = np.asarray([0, 0, 0])  # 可选：黑色背景
 
-    return glyph.GetOutput()
+    # 运行并销毁窗口
+    vis.run()
+    vis.destroy_window()
 
-def visualize(polydata):
-    # Mapper 和 Actor
-    mapper = vtk.vtkPolyDataMapper()
-    mapper.SetInputData(polydata)
-    actor = vtk.vtkActor()
-    actor.SetMapper(mapper)
-    actor.GetProperty().SetPointSize(2)  # 点大小
-
-    # Renderer
-    renderer = vtk.vtkRenderer()
-    renderer.AddActor(actor)
-    renderer.SetBackground(0.1, 0.1, 0.1)
-
-    # Render Window
-    renWin = vtk.vtkRenderWindow()
-    renWin.AddRenderer(renderer)
-    renWin.SetSize(800, 600)
-    renWin.SetWindowName("VTK Point Cloud Visualization")
-
-    # Interactor
-    iren = vtk.vtkRenderWindowInteractor()
-    iren.SetRenderWindow(renWin)
-    iren.Initialize()
-    renWin.Render()
-    iren.Start()
 
 if __name__ == "__main__":
-    TXT_PATH = "./test/scene/area_scene_50.txt"
-    xyz, labels = load_and_normalize(TXT_PATH)
-    polydata = create_vtk_point_cloud(xyz, labels)
-    visualize(polydata)
-
+    # 默认调用
+    visualize_point_cloud_txt("results/area_separate/scene_150.txt")
