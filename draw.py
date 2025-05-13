@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 # 日志文件路径，请根据本地实际路径进行替换
 file_paths = {
-    'origin': 'weights_test/origin_999_train.log',
-    'pycbam': 'weights_test/pycbam_895_train.log'
+    'origin': 'weights_test/origin_train.log',
+    'pycbam': 'weights_test/pycbam_train.log'
 }
 
 # 初始化存储字典
