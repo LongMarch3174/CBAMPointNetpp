@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 def visualize_point_cloud_txt(
     file_path: str,
-    point_size: int = 15,
+    point_size: int = 12.5,
     colormap: str = "tab20"
 ):
     """
@@ -37,7 +37,7 @@ def visualize_point_cloud_txt(
 
     # 4. 可视化
     vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name="PointCloud", width=800, height=600)
+    vis.create_window(window_name="PointCloud", width=1200, height=900)
     vis.add_geometry(pcd)
 
     # 设置渲染选项：点大小
@@ -52,4 +52,4 @@ def visualize_point_cloud_txt(
 
 if __name__ == "__main__":
     # 默认调用
-    visualize_point_cloud_txt("results/area_separate/scene_150.txt")
+    visualize_point_cloud_txt("results/area_separate/scene_175.txt")
