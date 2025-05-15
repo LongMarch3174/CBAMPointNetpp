@@ -241,7 +241,7 @@ def test(mode='merged'):
     test_loader = torch.utils.data.DataLoader(MyDataset(4096, path, train=False), batch_size=1, shuffle=False)
 
     model = PointNet2MSGSeg(12).cuda(args.gpu)
-    model.load_state_dict(torch.load("weights_test/pycbam_550.pth"))
+    model.load_state_dict(torch.load("weights/pycbam_550.pth"))
     model = model.eval()
 
     test_true_cls = []

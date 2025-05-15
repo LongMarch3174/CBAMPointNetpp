@@ -52,4 +52,4 @@ def visualize_point_cloud_txt(
 
 if __name__ == "__main__":
     # 默认调用
-    visualize_point_cloud_txt("results/area_separate/scene_175.txt")
+    visualize_point_cloud_txt("results/segmentation_result.txt")

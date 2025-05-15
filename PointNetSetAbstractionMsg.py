@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import utils
 import torch.nn.functional as F
-import PointNetSetAbstraction as SAALL
 
 
 class PointNetSetAbstractionMsg(nn.Module):
@@ -114,34 +113,3 @@ class CBAMLayer3D(nn.Module):
         x = spatial_out * x
 
         return x
-
-if __name__ == "__main__":
-    from torch.autograd import Variable
-
-    torch.manual_seed(1)
-    torch.cuda.manual_seed_all(1)  # 保证训练时获取的随机数都是一样的
-    xyz = torch.randn(2, 1024, 3).cuda()
-    xyz_feats = torch.randn(2, 6, 1024).cuda()
-    test1 = PointNetSetAbstractionMsg(
-        512, [0.1, 0.2, 0.4], [16, 32, 128], 0+6, [[32, 32, 64], [64, 64, 128], [64, 96, 128]]
-    )
-    test1.cuda()
-    new_xyz1, new_points_concat1 = test1(xyz, xyz_feats)
-
-    test2 = PointNetSetAbstractionMsg(
-        128, [0.2, 0.4, 0.8], [32, 64, 128], 320, [[64, 64, 128], [128, 128, 256], [128, 128, 256]]
-    )
-    test2.cuda()
-    new_xyz2, new_points_concat2 = test2(new_xyz1, new_points_concat1)
-
-    test3 = SAALL.PointNetSetAbstraction(None, None, None, 640 + 3, [256, 512, 1024], True)
-    test3.cuda()
-    new_xyz3, new_points_concat3 = test3(new_xyz2, new_points_concat2)
-
-
-
-
-
-
-
-

@@ -2,83 +2,83 @@
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1024</width>
+    <height>768</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>场景分割与统计工具 v1.0</string>
   </property>
-  <property name="geometry">
-    <rect>
-      <x>100</x>      <!-- 窗口左上角 X 坐标 -->
-      <y>100</y>      <!-- 窗口左上角 Y 坐标 -->
-      <width>1024</width>  <!-- 窗口初始宽度 -->
-      <height>768</height> <!-- 窗口初始高度 -->
-    </rect>
-  </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout">
-    <!-- 顶部：功能区1 和 功能区2 并排 -->
     <item>
      <layout class="QHBoxLayout" name="horizontalLayoutTop">
-      <!-- 功能区 1：加载 & 预处理 -->
       <item>
        <widget class="QGroupBox" name="groupBoxLoad">
         <property name="title">
          <string>功能区 1：加载 &amp; 预处理</string>
         </property>
         <layout class="QVBoxLayout" name="verticalLayoutLoad">
-         <!-- 已选场景文件列表，固定高度 -->
          <item>
           <widget class="QListWidget" name="listScenes">
-           <property name="maximumHeight"><number>120</number></property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="maximumHeight">
+            <number>100</number>
            </property>
           </widget>
          </item>
-         <!-- 预处理操作区，固定高度 -->
          <item>
-          <widget class="QWidget" name="widgetPreprocess">
-           <property name="maximumHeight"><number>40</number></property>
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <layout class="QHBoxLayout" name="horizontalLayoutPreprocess">
-            <item>
-             <widget class="QPushButton" name="btnSelectScenes">
-              <property name="text"><string>选择场景文件…</string></property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed"/>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="btnStartPreprocess">
-              <property name="text"><string>开始预处理</string></property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Preferred" vsizetype="Fixed"/>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QProgressBar" name="pbarPreprocess">
-              <property name="maximumHeight"><number>20</number></property>
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Fixed"/>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
+          <layout class="QHBoxLayout" name="horizontalLayoutPreprocess">
+           <item>
+            <widget class="QPushButton" name="btnSelectScenes">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>选择场景文件…</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnStartPreprocess">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>开始预处理</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QProgressBar" name="pbarPreprocess">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
       </item>
-      <!-- 功能区 2：模型分割 -->
       <item>
        <widget class="QGroupBox" name="groupBoxSegment">
         <property name="title">
@@ -87,12 +87,14 @@
         <layout class="QVBoxLayout" name="verticalLayoutSegment">
          <item>
           <widget class="QListWidget" name="listNpyFiles">
-           <property name="maximumHeight"><number>120</number></property>
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="maximumHeight">
+            <number>100</number>
            </property>
           </widget>
          </item>
@@ -100,7 +102,9 @@
           <layout class="QHBoxLayout" name="horizontalLayoutSegment">
            <item>
             <widget class="QPushButton" name="btnSegment">
-             <property name="text"><string>执行分割</string></property>
+             <property name="text">
+              <string>执行分割</string>
+             </property>
             </widget>
            </item>
            <item>
@@ -113,19 +117,12 @@
       </item>
      </layout>
     </item>
-    <!-- 底部：功能区3 + 4 三列布局 -->
     <item>
      <widget class="QGroupBox" name="groupBoxVisStat">
       <property name="title">
        <string>功能区 3 + 4：可视化 &amp; 统计</string>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutVisStat">
-       <property name="stretch">
-        <number>0</number>
-        <number>5</number>
-        <number>2</number>
-       </property>
-       <!-- 处理后场景列表，固定宽度 -->
+      <layout class="QHBoxLayout" name="horizontalLayoutVisStat" stretch="0,0,0">
        <item>
         <widget class="QListWidget" name="listSegFiles">
          <property name="sizePolicy">
@@ -134,31 +131,37 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
-         <property name="minimumWidth"><number>100</number></property>
-         <property name="maximumWidth"><number>150</number></property>
         </widget>
        </item>
-       <!-- Open3D 可视化区 -->
        <item>
-        <widget class="QWidget" name="visWidget">
-         <property name="minimumSize"><size><width>400</width><height>300</height></size></property>
+        <widget class="QWidget" name="visWidget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
            <horstretch>5</horstretch>
            <verstretch>1</verstretch>
           </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>400</width>
+           <height>300</height>
+          </size>
+         </property>
         </widget>
        </item>
-       <!-- 饼状图统计区 -->
        <item>
-        <widget class="QWidget" name="pieChartWidget">
-         <property name="minimumSize"><size><width>200</width><height>300</height></size></property>
+        <widget class="QWidget" name="pieChartWidget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>2</horstretch>
            <verstretch>1</verstretch>
           </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>200</width>
+           <height>300</height>
+          </size>
          </property>
         </widget>
        </item>
@@ -167,7 +170,16 @@
     </item>
    </layout>
   </widget>
-  <widget class="QMenuBar" name="menubar"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>1024</width>
+     <height>26</height>
+    </rect>
+   </property>
+  </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>
  <resources/>
