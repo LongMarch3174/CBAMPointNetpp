@@ -24,55 +24,37 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayoutLoad">
          <item>
-          <widget class="QListWidget" name="listScenes">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="maximumHeight">
-            <number>100</number>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayoutPreprocess">
+          <layout class="QHBoxLayout" name="horizontalLayoutTxtSelect">
            <item>
-            <widget class="QPushButton" name="btnSelectScenes">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+            <widget class="QLineEdit" name="lineEditSceneFile">
+             <property name="readOnly">
+              <bool>true</bool>
              </property>
-             <property name="text">
-              <string>选择场景文件…</string>
+             <property name="placeholderText">
+              <string>请选择场景描述文件 (*.txt)</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="btnStartPreprocess">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+            <widget class="QPushButton" name="btnSelectSceneFile">
+             <property name="text">
+              <string>选择场景文件</string>
              </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayoutPreprocess">
+           <item>
+            <widget class="QPushButton" name="btnStartPreprocess">
              <property name="text">
               <string>开始预处理</string>
              </property>
             </widget>
            </item>
            <item>
-            <widget class="QProgressBar" name="pbarPreprocess">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-            </widget>
+            <widget class="QProgressBar" name="pbarPreprocess"/>
            </item>
           </layout>
          </item>
@@ -86,17 +68,35 @@
         </property>
         <layout class="QVBoxLayout" name="verticalLayoutSegment">
          <item>
-          <widget class="QListWidget" name="listNpyFiles">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="maximumHeight">
-            <number>100</number>
-           </property>
-          </widget>
+          <layout class="QHBoxLayout" name="horizontalLayoutDatasetSelect">
+           <item>
+            <widget class="QLineEdit" name="lineEditDataFile">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="placeholderText">
+              <string>*_data.npy</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEditLabelFile">
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+             <property name="placeholderText">
+              <string>*_label.npy</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnSelectDataset">
+             <property name="text">
+              <string>选择数据和标签文件</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
          <item>
           <layout class="QHBoxLayout" name="horizontalLayoutSegment">
@@ -118,49 +118,56 @@
      </layout>
     </item>
     <item>
-     <widget class="QGroupBox" name="groupBoxVisStat">
+     <widget class="QGroupBox" name="groupBoxSelectResult">
       <property name="title">
-       <string>功能区 3 + 4：可视化 &amp; 统计</string>
+       <string>功能区 3：选择结果文件</string>
       </property>
-      <layout class="QHBoxLayout" name="horizontalLayoutVisStat" stretch="0,0,0">
+      <layout class="QHBoxLayout" name="horizontalLayoutResultSelect">
        <item>
-        <widget class="QListWidget" name="listSegFiles">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Expanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <widget class="QLineEdit" name="lineEditResultFile">
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+         <property name="placeholderText">
+          <string>请选择分割结果文件 (*.txt)</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QWidget" name="visWidget" native="true">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-           <horstretch>5</horstretch>
-           <verstretch>1</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="minimumSize">
-          <size>
-           <width>400</width>
-           <height>300</height>
-          </size>
+        <widget class="QPushButton" name="btnSelectResultFile">
+         <property name="text">
+          <string>选择结果文件</string>
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QPushButton" name="btnVisualize">
+         <property name="text">
+          <string>可视化</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="groupBoxStat">
+      <property name="title">
+       <string>功能区 4：统计</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayoutStat">
        <item>
         <widget class="QWidget" name="pieChartWidget" native="true">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-           <horstretch>2</horstretch>
-           <verstretch>1</verstretch>
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
           </sizepolicy>
          </property>
          <property name="minimumSize">
           <size>
            <width>200</width>
-           <height>300</height>
+           <height>200</height>
           </size>
          </property>
         </widget>

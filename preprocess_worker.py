@@ -6,13 +6,13 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from proceed_utils import farthest_point_sample, coordinate_normalize2
 
 class PreprocessWorker(QObject):
-    progress = pyqtSignal(int)
+    progress = pyqtSignal(int)   # 发出 [0..100]
     finished = pyqtSignal()
     error = pyqtSignal(str)
 
-    def __init__(self, input_dir: str, output_dir: str, num_points=4096):
+    def __init__(self, input_file: str, output_dir: str, num_points: int = 4096):
         super().__init__()
-        self.input_dir = input_dir
+        self.input_file = input_file
         self.output_dir = output_dir
         self.num_points = num_points
         self._is_running = True
@@ -21,102 +21,98 @@ class PreprocessWorker(QObject):
         self._is_running = False
 
     def run(self):
+        """处理单个场景描述 TXT 文件，按网格分块采样并保存"""
         try:
-            all_data = []
-            all_label = []
-            file_list = sorted(os.listdir(self.input_dir))
-            total_files = len(file_list)
+            # —— 1. 读取并解析文件 —— #
+            if not os.path.isfile(self.input_file):
+                self.error.emit("输入文件不存在")
+                return
 
-            for i, filename in enumerate(file_list):
+            lines = []
+            with open(self.input_file, 'r') as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) >= 5:
+                        try:
+                            lines.append([float(x) for x in parts[:5]])
+                        except:
+                            self.error.emit("数值转换错误")
+                            return
+            if not lines:
+                self.error.emit("文件中无有效点数据")
+                return
+
+            data_np = np.array(lines)  # shape = (N,5)
+            X, Y = data_np[:,0], data_np[:,1]
+
+            # —— 2. 网格参数 —— #
+            Xmin, Xmax = X.min(), X.max()
+            Ymin, Ymax = Y.min(), Y.max()
+            nx = math.ceil((Xmax - Xmin) / 100) or 1
+            ny = math.ceil((Ymax - Ymin) / 100) or 1
+            total_cells = nx * ny
+
+            # —— 3. 计算每点归属 cell_index —— #
+            rows = np.floor((Y - Ymin) / 100).astype(int)
+            cols = np.floor((X - Xmin) / 100).astype(int)
+            rows = np.clip(rows, 0, ny-1)
+            cols = np.clip(cols, 0, nx-1)
+            cell_indices = rows * nx + cols
+
+            # —— 4. 分桶收集索引 —— #
+            buckets = [[] for _ in range(total_cells)]
+            for idx_pt, c in enumerate(cell_indices):
+                buckets[c].append(idx_pt)
+
+            # —— 5. 对每个 cell 做 FPS + 归一化 —— #
+            data_list = []
+            label_list = []
+            xyz_all_cpu = data_np[:, :3]  # 全局点集 (CPU)
+            for ci, idx_list in enumerate(buckets):
                 if not self._is_running:
-                    break
-
-                file_path = os.path.join(self.input_dir, filename)
-                if not os.path.isfile(file_path):
+                    return
+                if len(idx_list) < self.num_points:
+                    # 不够点时直接跳过，仍然更新进度
+                    self.progress.emit(int((ci+1)/total_cells*100))
                     continue
 
-                # 1. 读入并构造 Nx5 numpy 数组
-                lines = []
-                with open(file_path, 'r') as f:
-                    for line in f:
-                        parts = line.strip().split()
-                        if len(parts) >= 5:
-                            try:
-                                lines.append([float(x) for x in parts[:5]])
-                            except:
-                                self.error.emit(f"数值转换错误：{filename}")
-                                return
-                if len(lines) == 0:
-                    self.error.emit(f"没有有效行：{filename}")
-                    return
-                input_data = np.array(lines)  # shape = (N,5)
+                # 在 GPU 上做 FPS 和归一化
+                block = data_np[idx_list]                   # (M,5) CPU
+                block_t = torch.from_numpy(block).cuda()    # (M,5) GPU
+                xyz_all = torch.from_numpy(xyz_all_cpu).cuda()
 
-                # 2. 计算网格划分参数
-                X = input_data[:, 0]
-                Y = input_data[:, 1]
-                Xmin, Xmax = X.min(), X.max()
-                Ymin, Ymax = Y.min(), Y.max()
-                # 每 100 单位一个网格
-                a = math.ceil((Xmax - Xmin) / 100) or 1
-                b = math.ceil((Ymax - Ymin) / 100) or 1
-                allblock = a * b
+                # FPS 采样
+                fps_idx = farthest_point_sample(
+                    block_t[:, :3].unsqueeze(0),
+                    self.num_points
+                )                                           # (1, num_points)
+                sampled = block_t[fps_idx.squeeze(0)][:, :5]# (num_points,5)
 
-                # 3. 向量化：计算每个点所属的行/列索引
-                #    floor((coord - min) / 100)
-                rows = np.floor((Y - Ymin) / 100).astype(int)
-                cols = np.floor((X - Xmin) / 100).astype(int)
-                # 越界 clamp
-                rows = np.clip(rows, 0, b - 1)
-                cols = np.clip(cols, 0, a - 1)
-                cell_indices = rows * a + cols  # shape = (N,)
+                # 归一化
+                new_xyz = coordinate_normalize2(
+                    xyz_all, sampled[:, :3]
+                )                                           # (num_points,3)
 
-                # 4. 根据 cell_indices 构建 list2
-                list2 = [[] for _ in range(allblock)]
-                for idx_point, cell in enumerate(cell_indices):
-                    list2[cell].append(idx_point)
+                # 标签
+                lbl = sampled[:, 4].unsqueeze(1)            # (num_points,1)
 
-                # 5. 对每个网格执行 FPS 采样 + 归一化
-                data_list = []
-                label_list = []
-                for id_list in list2:
-                    if len(id_list) < self.num_points:
-                        continue
+                data_list.append(new_xyz.unsqueeze(0))      # (1,num_points,3)
+                label_list.append(lbl.unsqueeze(0))         # (1,num_points,1)
 
-                    block = input_data[id_list]                        # (M,5) on CPU
-                    block_t = torch.from_numpy(block).cuda()           # (M,5) -> GPU
-                    xyz_all = torch.from_numpy(input_data[:, :3]).cuda()
+                # 更新进度
+                self.progress.emit(int((ci+1)/total_cells*100))
 
-                    # FPS 采样
-                    xyz = block_t[:, :3].unsqueeze(0)                  # (1, M, 3)
-                    fps_idx = farthest_point_sample(xyz, self.num_points)  # (1, num_points)
-                    sampled = block_t[fps_idx.squeeze(0)][:,:5]        # (num_points,5)
+            # —— 6. 保存输出 —— #
+            if not data_list:
+                self.error.emit("所有网格块点数不足，未生成任何输出")
+                return
 
-                    # 归一化
-                    coords = sampled[:, :3]
-                    new_xyz = coordinate_normalize2(xyz_all, coords)  # (num_points,3)
-
-                    # label
-                    lbl = sampled[:, 4].unsqueeze(1)                   # (num_points,1)
-
-                    data_list.append(new_xyz.unsqueeze(0))             # (1,num_points,3)
-                    label_list.append(lbl.unsqueeze(0))                # (1,num_points,1)
-
-                # 收集本文件的所有子块
-                if data_list:
-                    all_data.append(torch.cat(data_list, dim=0))       # (K,num_points,3)
-                    # 从 (K,num_points,1) -> (K,num_points)
-                    all_label.append(torch.cat(label_list, dim=0).squeeze(-1))
-
-                # 进度
-                self.progress.emit(int((i + 1) / total_files * 100))
-
-            # 6. 保存
-            if all_data:
-                out_data = torch.cat(all_data, dim=0).cpu().numpy()
-                out_label = torch.cat(all_label, dim=0).cpu().numpy()
-                os.makedirs(self.output_dir, exist_ok=True)
-                np.save(os.path.join(self.output_dir, 'test_data.npy'), out_data)
-                np.save(os.path.join(self.output_dir, 'test_label.npy'), out_label)
+            out_data = torch.cat(data_list, dim=0).cpu().numpy()
+            out_label = torch.cat(label_list, dim=0).squeeze(-1).cpu().numpy()
+            base = os.path.splitext(os.path.basename(self.input_file))[0]
+            os.makedirs(self.output_dir, exist_ok=True)
+            np.save(os.path.join(self.output_dir, f"{base}_data.npy"), out_data)
+            np.save(os.path.join(self.output_dir, f"{base}_label.npy"), out_label)
 
             self.finished.emit()
 
